@@ -225,10 +225,12 @@ class Runner:
             root_folder=self.project_root,
             entry_script=Path(sys.argv[0]).resolve(),
             conda_dependencies_files=get_all_environment_files(self.project_root),
-            hyperdrive_config_func=self.model_config.get_hyperdrive_config,
+            hyperdrive_config_func=self.model_config.get_hyperdrive_config if self.model_config else None,
             # For large jobs, upload of results can time out because of large checkpoint files. Default is 600
             upload_timeout_seconds=86400,
         )
+        if not self.model_config:
+            self.azure_config.hyperdrive = False
         source_config.set_script_params_except_submit_flag()
         azure_run = submit_to_azureml(self.azure_config, source_config,
                                       self.lightning_container.all_azure_dataset_ids(),
