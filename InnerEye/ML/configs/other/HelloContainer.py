@@ -129,7 +129,7 @@ class HelloRegression(LightningModule):
         This method is part of the standard PyTorch Lightning interface. For an introduction, please see
         https://pytorch-lightning.readthedocs.io/en/stable/starter/converting.html
         It returns the PyTorch optimizer(s) and learning rate scheduler(s) that should be used for training.
-=        """
+        """
         optimizer = Adam(self.parameters(), lr=1e-1)
         scheduler = StepLR(optimizer, step_size=20, gamma=0.5)
         return [optimizer], [scheduler]
