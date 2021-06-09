@@ -3,6 +3,7 @@
 #  Licensed under the MIT License (MIT). See LICENSE in the repo root for license information.
 #  ------------------------------------------------------------------------------------------
 from __future__ import annotations
+from abc import abstractmethod
 
 import logging
 from enum import Enum, unique
@@ -12,15 +13,18 @@ from typing import Any, Dict, List, Optional
 import param
 from pandas import DataFrame
 from param import Parameterized
+from azureml.core import ScriptRunConfig
+from azureml.train.hyperdrive import GridParameterSampling, HyperDriveConfig, choice
 
-from InnerEye.Azure.azure_util import DEFAULT_CROSS_VALIDATION_SPLIT_INDEX, RUN_CONTEXT, is_offline_run_context
+from InnerEye.Azure.azure_util import (CROSS_VALIDATION_SPLIT_INDEX_TAG_KEY, DEFAULT_CROSS_VALIDATION_SPLIT_INDEX,
+                                       RUN_CONTEXT, is_offline_run_context)
 from InnerEye.Common import fixed_paths
 from InnerEye.Common.common_util import is_windows
 from InnerEye.Common.fixed_paths import DEFAULT_AML_UPLOAD_DIR, DEFAULT_LOGS_DIR_NAME
 from InnerEye.Common.generic_parsing import GenericConfig
 from InnerEye.Common.type_annotations import PathOrString, TupleFloat2
-from InnerEye.ML.common import DATASET_CSV_FILE_NAME, ModelExecutionMode, create_unique_timestamp_id, \
-    get_best_checkpoint_path, get_recovery_checkpoint_path
+from InnerEye.ML.common import (DATASET_CSV_FILE_NAME, ModelExecutionMode, create_unique_timestamp_id,
+                                get_best_checkpoint_path, get_recovery_checkpoint_path)
 
 # A folder inside of the outputs folder that will contain all information for running the model in inference mode
 
@@ -276,6 +280,51 @@ class WorkflowParams(param.Parameterized):
             seed += self.cross_validation_split_index
         return seed
 
+    def get_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
+        """
+        Returns the HyperDrive config for either parameter search or cross validation
+        (if number_of_cross_validation_splits > 1).
+        :param run_config: AzureML estimator
+        :return: HyperDriveConfigs
+        """
+        if self.perform_cross_validation:
+            return self.get_cross_validation_hyperdrive_config(run_config)
+        else:
+            return self.get_parameter_search_hyperdrive_config(run_config)
+
+    def get_cross_validation_hyperdrive_sampler(self) -> GridParameterSampling:
+        """
+        Returns the cross validation sampler, required to sample the entire parameter space for cross validation.
+        """
+        return GridParameterSampling(parameter_space={
+            CROSS_VALIDATION_SPLIT_INDEX_TAG_KEY: choice(list(range(self.number_of_cross_validation_splits))),
+        })
+
+    def get_total_number_of_cross_validation_runs(self) -> int:
+        """
+        Returns the total number of HyperDrive/offline runs required to sample the entire
+        cross validation parameter space.
+        """
+        return self.number_of_cross_validation_splits
+
+    @abstractmethod
+    def get_cross_validation_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
+        """
+        Is implemented in both ModelConfigBase and LightningContainer
+        :param run_config: AzureML estimator
+        :return: HyperDriveConfigs
+        """
+        pass
+
+    @abstractmethod
+    def get_parameter_search_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
+        """
+        Is implemented in ModelConfigBase but not in LightningContainer. Classes inheriting
+        from LightningCountainer may wish to provide an implementation.
+        :param run_config: AzureML estimator
+        :return: HyperDriveConfigs
+        """
+        pass
 
 class DatasetParams(param.Parameterized):
     azure_dataset_id: str = param.String(doc="If provided, the ID of the dataset to use when running in AzureML. "

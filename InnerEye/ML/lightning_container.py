@@ -11,8 +11,11 @@ import torch
 from pytorch_lightning import LightningDataModule, LightningModule
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
+from azureml.core import ScriptRunConfig
+from azureml.train.hyperdrive import HyperDriveConfig, PrimaryMetricGoal
 
 from InnerEye.Common.generic_parsing import GenericConfig, create_from_matching_params
+from InnerEye.Common.metrics_constants import TrackedMetrics
 from InnerEye.ML.common import ModelExecutionMode
 from InnerEye.ML.deep_learning_config import DatasetParams, OptimizerParams, OutputParams, TrainerParams, \
     WorkflowParams, load_checkpoint
@@ -287,6 +290,26 @@ class LightningContainer(GenericConfig,
         if isinstance(self._model, LightningModuleWithOptimizer):
             self._model._optimizer_params = create_from_matching_params(self, OptimizerParams)
             self._model._trainer_params = create_from_matching_params(self, TrainerParams)
+
+    def get_cross_validation_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
+        """
+        Returns a configuration for AzureML Hyperdrive that varies the cross validation split index.
+        :param run_config: The AzureML run configuration object that training for an individual model.
+        :return: A hyperdrive configuration object.
+        """
+        return HyperDriveConfig(
+            run_config=run_config,
+            hyperparameter_sampling=self.get_cross_validation_hyperdrive_sampler(),
+            primary_metric_name=TrackedMetrics.Val_Loss.value,
+            primary_metric_goal=PrimaryMetricGoal.MINIMIZE,
+            max_total_runs=self.get_total_number_of_cross_validation_runs()
+        )
+
+    def get_parameter_search_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:  # type: ignore
+        """
+        Parameter search is not implemented. It should be implemented in a sub class if needed.
+        """
+        raise NotImplementedError("Parameter search is not implemented. It should be implemented in a sub class if needed.")
 
     def __str__(self) -> str:
         """Returns a string describing the present object, as a list of key: value strings."""

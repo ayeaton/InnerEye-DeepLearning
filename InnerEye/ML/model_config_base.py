@@ -9,10 +9,9 @@ from typing import Any, Callable, Dict, Optional
 
 import pandas as pd
 from azureml.core import ScriptRunConfig
-from azureml.train.hyperdrive import GridParameterSampling, HyperDriveConfig, PrimaryMetricGoal, choice
+from azureml.train.hyperdrive import HyperDriveConfig, PrimaryMetricGoal
 from pandas import DataFrame
 
-from InnerEye.Azure.azure_util import CROSS_VALIDATION_SPLIT_INDEX_TAG_KEY
 from InnerEye.Common.common_util import ModelProcessing
 from InnerEye.Common.metrics_constants import TrackedMetrics
 
@@ -150,21 +149,6 @@ class ModelConfigBase(DeepLearningConfig, abc.ABC, metaclass=ModelConfigBaseMeta
         # because this would prevent us from easily instantiating this class in tests.
         raise NotImplementedError("create_model must be overridden")
 
-    def get_total_number_of_cross_validation_runs(self) -> int:
-        """
-        Returns the total number of HyperDrive/offline runs required to sample the entire
-        cross validation parameter space.
-        """
-        return self.number_of_cross_validation_splits
-
-    def get_cross_validation_hyperdrive_sampler(self) -> GridParameterSampling:
-        """
-        Returns the cross validation sampler, required to sample the entire parameter space for cross validation.
-        """
-        return GridParameterSampling(parameter_space={
-            CROSS_VALIDATION_SPLIT_INDEX_TAG_KEY: choice(list(range(self.number_of_cross_validation_splits))),
-        })
-
     def get_cross_validation_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
         """
         Returns a configuration for AzureML Hyperdrive that varies the cross validation split index.
@@ -189,18 +173,6 @@ class ModelConfigBase(DeepLearningConfig, abc.ABC, metaclass=ModelConfigBaseMeta
         """
         splits = dataset_split.get_k_fold_cross_validation_splits(self.number_of_cross_validation_splits)
         return splits[self.cross_validation_split_index]
-
-    def get_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:
-        """
-        Returns the HyperDrive config for either parameter search or cross validation
-        (if number_of_cross_validation_splits > 1).
-        :param run_config: AzureML estimator
-        :return: HyperDriveConfigs
-        """
-        if self.perform_cross_validation:
-            return self.get_cross_validation_hyperdrive_config(run_config)
-        else:
-            return self.get_parameter_search_hyperdrive_config(run_config)
 
     def get_dataset_splits(self) -> DatasetSplits:
         """

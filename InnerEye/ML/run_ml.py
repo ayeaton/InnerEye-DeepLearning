@@ -343,8 +343,6 @@ class MLRunner:
         """
         self.setup()
         if self.is_offline_cross_val_parent_run():
-            if self.innereye_config.is_segmentation_model:
-                raise NotImplementedError("Offline cross validation is only supported for classification models.")
             self.spawn_offline_cross_val_classification_child_runs()
             return
 
