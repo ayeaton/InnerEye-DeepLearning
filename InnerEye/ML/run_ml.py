@@ -244,12 +244,8 @@ class MLRunner:
     @property
     def innereye_config(self) -> DeepLearningConfig:
         """
-        Gets the model configuration object for all built-in InnerEye models. Raises an exception if the present
-        object trains a LightningContainer that is not a built-in InnerEye model.
+        Gets the model configuration object for all built-in InnerEye models.
         """
-        # if self.model_config is None or not isinstance(self.model_config, DeepLearningConfig):
-        #     raise ValueError("This property should only be used with built-in InnerEye models, but model "
-        #                      f"configuration is of type {type(self.model_config)}")
         return self.model_config
 
     @property
