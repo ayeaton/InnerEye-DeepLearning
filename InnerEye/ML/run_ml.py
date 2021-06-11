@@ -242,7 +242,7 @@ class MLRunner:
         return is_offline_run_context(RUN_CONTEXT)
 
     @property
-    def innereye_config(self) -> DeepLearningConfig:
+    def innereye_config(self) -> Optional[DeepLearningConfig]:
         """
         Gets the model configuration object for all built-in InnerEye models.
         """
