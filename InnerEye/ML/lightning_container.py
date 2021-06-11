@@ -305,7 +305,7 @@ class LightningContainer(GenericConfig,
             max_total_runs=self.get_total_number_of_cross_validation_runs()
         )
 
-    def get_parameter_search_hyperdrive_config(self, run_config: ScriptRunConfig) -> HyperDriveConfig:  # type: ignore
+    def get_parameter_search_hyperdrive_config(self, _: ScriptRunConfig) -> HyperDriveConfig:  # type: ignore
         """
         Parameter search is not implemented. It should be implemented in a sub class if needed.
         """
